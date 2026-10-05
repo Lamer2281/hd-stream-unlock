@@ -1,6 +1,6 @@
 {
-  "name": "HD Stream Diagnostics",
-  "description": "Diagnostics for locating Discord Screen Share quality/Nitro modules on Revenge.",
+  "name": "HD Stream Unlocker",
+  "description": "Unlocks client-side Discord stream quality checks.",
   "authors": [
     {
       "name": "Lamer2281",
@@ -8,7 +8,6 @@
     }
   ],
   "main": "index.js",
-  "hash": "d41db5879dd40d2f6a0e4dab837c7f19f1802c794c398004fa426c40f5f4f163",
   "vendetta": {
     "icon": "ic_video_camera"
   }

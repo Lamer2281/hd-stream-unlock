@@ -1,56 +1,101 @@
-(() => {
-  const V = globalThis.vendetta;
-  const timers = [];
+(function () {
+    const PATCH_NAME = "HD Stream Unlocker";
+    const patches = [];
 
-  function toast(s) {
-    try { V?.ui?.showToast?.(s); } catch {}
-    try { V?.ui?.toasts?.showToast?.(s); } catch {}
-  }
-
-  function inspect() {
-    try {
-      const mods = globalThis.modules;
-      if (!mods || typeof mods !== "object") return;
-
-      const results = [];
-      for (const [id, m] of Object.entries(mods)) {
+    function toast(message) {
         try {
-          const e = m?.publicModule?.exports;
-          if (!e || (typeof e !== "object" && typeof e !== "function")) continue;
-          const keys = Object.keys(e);
-          const hits = keys.filter(k =>
-            /screen|share|stream|video|quality|resolution|fps|rtc|media|premium|nitro|subscription|upsell/i.test(k)
-          );
-          if (hits.length) results.push({ id, keys: hits.slice(0, 80) });
+            globalThis.vendetta?.ui?.showToast?.(message);
         } catch {}
-      }
 
-      const interesting = results.filter(x =>
-        x.keys.some(k => /quality|resolution|fps|screen|share|video|stream/i.test(k))
-      );
-
-      try {
-        V?.logger?.log?.("[HD Diagnostics] " + JSON.stringify(results));
-      } catch {}
-
-      if (interesting.length) {
-        toast("HD Diagnostics: " + interesting.length + " candidates found — check Revenge logs");
-      }
-    } catch (e) {
-      try { V?.logger?.error?.("[HD Diagnostics] " + String(e)); } catch {}
+        try {
+            globalThis.vendetta?.ui?.toasts?.showToast?.(message);
+        } catch {}
     }
-  }
 
-  return {
-    onLoad() {
-      toast("HD Diagnostics loaded");
-      inspect();
-      const t = setInterval(inspect, 1500);
-      timers.push(t);
-    },
-    onUnload() {
-      timers.forEach(t => { try { clearInterval(t); } catch {} });
-      toast("HD Diagnostics disabled");
+    function patchFunction(obj, name, replacement) {
+        if (!obj || typeof obj[name] !== "function") {
+            return false;
+        }
+
+        const original = obj[name];
+        obj[name] = replacement(original);
+
+        patches.push(() => {
+            try {
+                if (obj[name] !== original) {
+                    obj[name] = original;
+                }
+            } catch {}
+        });
+
+        return true;
     }
-  };
+
+    function install() {
+        try {
+            const discordPremium = globalThis.__r?.(4446)?.default;
+
+            if (!discordPremium) {
+                toast("HD Unlocker: module 4446 not found");
+                return false;
+            }
+
+            let count = 0;
+
+            if (
+                patchFunction(
+                    discordPremium,
+                    "canStreamQuality",
+                    () => function () {
+                        return true;
+                    }
+                )
+            ) {
+                count++;
+            }
+
+            if (
+                patchFunction(
+                    discordPremium,
+                    "canUseHighVideoUploadQuality",
+                    () => function () {
+                        return true;
+                    }
+                )
+            ) {
+                count++;
+            }
+
+            toast(
+                count === 2
+                    ? "HD Stream Unlocker: ON"
+                    : "HD Unlocker: hooks " + count + "/2"
+            );
+
+            return count > 0;
+        } catch (e) {
+            try {
+                globalThis.vendetta?.logger?.error?.(e);
+            } catch {}
+
+            toast("HD Unlocker: error");
+            return false;
+        }
+    }
+
+    return {
+        onLoad() {
+            install();
+        },
+
+        onUnload() {
+            for (const unpatch of patches.splice(0)) {
+                try {
+                    unpatch();
+                } catch {}
+            }
+
+            toast("HD Stream Unlocker: OFF");
+        }
+    };
 })()
