@@ -1,0 +1,15 @@
+{
+  "name": "HD Stream Unlocker v3",
+  "description": "Client-side screen-share quality unlocker for Revenge/Vendetta-based Android clients.",
+  "authors": [
+    {
+      "name": "Lamer2281",
+      "id": "0"
+    }
+  ],
+  "main": "index.js",
+  "hash": "f366083448c8f78692aa7562bfe3ecaa9df7e9d11422ce265f523d42a60475b0",
+  "vendetta": {
+    "icon": "ic_video_camera"
+  }
+}
