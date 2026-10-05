@@ -1,125 +1,56 @@
-(function () {
-    const vendetta = globalThis.vendetta;
-    const patches = [];
-    let userStore = null;
-    let originalPremiumType;
+(() => {
+  const V = globalThis.vendetta;
+  const timers = [];
 
-    const qualityMethods = [
-        "getMaxVideoQuality",
-        "getMaxVideoHeight",
-        "getMaxVideoResolution",
-        "getMaxStreamQuality",
-        "getMaxScreenShareQuality",
-        "getMaxScreenShareResolution",
-        "getMaxVideoFPS",
-        "getMaxStreamFPS",
-        "getMaxScreenShareFPS"
-    ];
+  function toast(s) {
+    try { V?.ui?.showToast?.(s); } catch {}
+    try { V?.ui?.toasts?.showToast?.(s); } catch {}
+  }
 
-    function toast(message) {
+  function inspect() {
+    try {
+      const mods = globalThis.modules;
+      if (!mods || typeof mods !== "object") return;
+
+      const results = [];
+      for (const [id, m] of Object.entries(mods)) {
         try {
-            vendetta?.ui?.showToast?.(message);
-            vendetta?.ui?.toasts?.showToast?.(message);
+          const e = m?.publicModule?.exports;
+          if (!e || (typeof e !== "object" && typeof e !== "function")) continue;
+          const keys = Object.keys(e);
+          const hits = keys.filter(k =>
+            /screen|share|stream|video|quality|resolution|fps|rtc|media|premium|nitro|subscription|upsell/i.test(k)
+          );
+          if (hits.length) results.push({ id, keys: hits.slice(0, 80) });
         } catch {}
+      }
+
+      const interesting = results.filter(x =>
+        x.keys.some(k => /quality|resolution|fps|screen|share|video|stream/i.test(k))
+      );
+
+      try {
+        V?.logger?.log?.("[HD Diagnostics] " + JSON.stringify(results));
+      } catch {}
+
+      if (interesting.length) {
+        toast("HD Diagnostics: " + interesting.length + " candidates found — check Revenge logs");
+      }
+    } catch (e) {
+      try { V?.logger?.error?.("[HD Diagnostics] " + String(e)); } catch {}
     }
+  }
 
-    function patchUser() {
-        try {
-            userStore = vendetta.webpack.findByProps("getCurrentUser", "getUser");
-            if (!userStore?.getCurrentUser) return false;
-
-            const user = userStore.getCurrentUser();
-            if (user) {
-                originalPremiumType = user.premiumType;
-                user.premiumType = 2;
-            }
-
-            const unpatch = vendetta.patcher.after(
-                "HD Stream Unlocker",
-                userStore,
-                "getCurrentUser",
-                (_this, _args, result) => {
-                    if (result && typeof result === "object") {
-                        result.premiumType = 2;
-                    }
-                    return result;
-                }
-            );
-
-            if (typeof unpatch === "function") patches.push(unpatch);
-            return true;
-        } catch (e) {
-            try { vendetta.logger?.error?.(e); } catch {}
-            return false;
-        }
+  return {
+    onLoad() {
+      toast("HD Diagnostics loaded");
+      inspect();
+      const t = setInterval(inspect, 1500);
+      timers.push(t);
+    },
+    onUnload() {
+      timers.forEach(t => { try { clearInterval(t); } catch {} });
+      toast("HD Diagnostics disabled");
     }
-
-    function patchQuality() {
-        let count = 0;
-
-        for (const name of qualityMethods) {
-            try {
-                const mod = vendetta.webpack.findByProps(name);
-                if (!mod || typeof mod[name] !== "function") continue;
-
-                const unpatch = vendetta.patcher.after(
-                    "HD Stream Unlocker",
-                    mod,
-                    name,
-                    (_this, _args, result) => {
-                        if (typeof result === "number") {
-                            return name.includes("FPS")
-                                ? Math.max(result, 60)
-                                : Math.max(result, 2160);
-                        }
-
-                        if (result && typeof result === "object") {
-                            const out = { ...result };
-                            if ("width" in out)
-                                out.width = Math.max(Number(out.width) || 0, 3840);
-                            if ("height" in out)
-                                out.height = Math.max(Number(out.height) || 0, 2160);
-                            if ("fps" in out)
-                                out.fps = Math.max(Number(out.fps) || 0, 60);
-                            if ("frameRate" in out)
-                                out.frameRate = Math.max(Number(out.frameRate) || 0, 60);
-                            return out;
-                        }
-
-                        return result;
-                    }
-                );
-
-                if (typeof unpatch === "function") patches.push(unpatch);
-                count++;
-            } catch {}
-        }
-
-        return count;
-    }
-
-    return {
-        onLoad() {
-            const nitro = patchUser();
-            const hooks = patchQuality();
-            toast("HD Unlocker: Nitro " + (nitro ? "✓" : "✗") +
-                  " | quality hooks: " + hooks);
-        },
-
-        onUnload() {
-            for (const unpatch of patches.splice(0)) {
-                try { unpatch(); } catch {}
-            }
-
-            try {
-                const user = userStore?.getCurrentUser?.();
-                if (user && originalPremiumType !== undefined)
-                    user.premiumType = originalPremiumType;
-            } catch {}
-
-            userStore = null;
-            originalPremiumType = undefined;
-            toast("HD Stream Unlocker disabled");
-        }
-    };
+  };
 })()

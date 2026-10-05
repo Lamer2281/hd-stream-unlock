@@ -1,6 +1,6 @@
 {
-  "name": "HD Stream Unlocker v3",
-  "description": "Client-side screen-share quality unlocker for Revenge/Vendetta-based Android clients.",
+  "name": "HD Stream Diagnostics",
+  "description": "Diagnostics for locating Discord Screen Share quality/Nitro modules on Revenge.",
   "authors": [
     {
       "name": "Lamer2281",
@@ -8,7 +8,7 @@
     }
   ],
   "main": "index.js",
-  "hash": "f366083448c8f78692aa7562bfe3ecaa9df7e9d11422ce265f523d42a60475b0",
+  "hash": "d41db5879dd40d2f6a0e4dab837c7f19f1802c794c398004fa426c40f5f4f163",
   "vendetta": {
     "icon": "ic_video_camera"
   }
